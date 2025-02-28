@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI & Python Libraries Interface</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container-fluid {
+            display: flex;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            height: 100%;
+            width: 100%;
+        }
+        .sidebar {
+            background-color: #f1f1f1;
+            padding: 20px;
+            width: 300px;
+            overflow-y: auto;
+            position: fixed;
+            height: 100%;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .main-content {
+            flex-grow: 1;
+            margin-left: 320px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .chat {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .chat-header {
+            padding: 15px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+        }
+        .chat-body {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+        .chat-footer {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #dee2e6;
+        }
+        .loading {
+            display: none;
+            font-style: italic;
+            color: gray;
+            text-align: left;
+            margin-top: 10px;
+        }
+        .library-item {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-top: 5px;
+            text-align: center;
+            border-radius: 10px;
+            user-select: none;
+            font-size: 14px;
+        }
+        .library-item.selected {
+            background-color: #007bff;
+            color: white;
+        }
+        .message-container {
+            display: flex;
+            margin: 5px 0;
+        }
+        .message {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .user-message-container {
+            justify-content: flex-end;
+        }
+        .bot-message-container {
+            justify-content: flex-start;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            border-top-right-radius: 0;
+        }
+        .bot-message {
+            background-color: #e9ecef;
+            color: black;
+            border-top-left-radius: 0;
+        }
+        #message-input {
+            height: 45px;
+            font-size: 16px;
+            border-radius: 10px;
+        }
+        #send-button, #speech-toggle {
+            height: 45px;
+            font-size: 16px;
+            padding: 0 15px;
+            margin-left: 10px;
+            border-radius: 10px;
+        }
+        #language-select {
+            height: 45px;
+            font-size: 16px;
+            border-radius: 10px; 
+            border: 1px solid #ccc; 
+            padding: 0 10px; 
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="sidebar">
+        <h3>Select AI / Python Library</h3>
+        <div class="library-item" data-library="google">Google Generative AI</div>
+        <div class="library-item" data-library="chatgpt">Chat GPT</div>
+        <div class="library-item" data-library="huggingface">HF - Text Generation</div>
+        <div class="library-item" data-library="sentiment">HF - Sentiment Analysis</div>
+        <div class="library-item" data-library="classifier">HF - Classification</div>
+        <div class="library-item" data-library="translator">HF - Translator (EN to FR)</div>
+        <div class="library-item" data-library="qna">HF - Q&A</div>
+        <div class="library-item" data-library="ner">HF - Named Entity Recognition (NER)</div>
+        <div class="library-item" data-library="arabic_translator">HF - Translator (EN to AR)</div>
+    </div>
+
+    <div class="main-content">
+        <div class="chat">
+            <div class="chat-header" id="chat-header">Chat Interface</div>
+            <div class="chat-body" id="chat-body"></div>
+            <div class="loading" id="loading">Loading...</div>
+            <div class="chat-footer">
+                <select id="language-select" class="form-select" style="width: 200px;">
+                    <option value="en-US">American English</option>
+                    <option value="en-GB">British English</option>
+                    <option value="en-IN">Indian English</option>
+                    <option value="custom">Custom Accent</option>
+                </select>
+                <input type="text" class="form-control" id="message-input" style="flex-grow: 1;" placeholder="Type your query...">
+                <button class="btn btn-primary" id="send-button">Send</button>
+                <button class="btn btn-secondary" id="speech-toggle">🎙️</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+    let selectedModel = 'google';
+    let recognizing = false;
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    const synth = window.speechSynthesis;
+    let availableVoices = [];
+    let selectedLanguage = "en-US";
+
+    function populateVoices() {
+        availableVoices = synth.getVoices();
+    }
+    populateVoices();
+    if (synth.onvoiceschanged !== undefined) {
+        synth.onvoiceschanged = populateVoices;
+    }
+
+    window.addEventListener("beforeunload", () => {
+        if (synth.speaking) {
+            synth.cancel();
+        }
+    });
+
+    $('#language-select').on('change', function () {
+        selectedLanguage = $(this).val();
+        recognition.lang = selectedLanguage;
+    });
+
+    function speakText(text) {
+        if (synth.speaking) {
+            synth.cancel();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voice = availableVoices.find(v => v.lang === selectedLanguage);
+
+        if (selectedLanguage === 'custom') {
+            
+            utterance.lang = 'en-US';  
+            utterance.voice = availableVoices.find(v => v.name === 'Google UK English Male'); 
+        } else if (voice) {
+            utterance.voice = voice;
+            utterance.lang = selectedLanguage;
+        }
+
+        synth.speak(utterance);
+    }
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        $('#message-input').val(transcript);
+    };
+
+    recognition.onend = () => recognizing = false;
+
+    $('#speech-toggle').on('click', () => {
+        if (recognizing) {
+            recognition.stop();
+            recognizing = false;
+        } else {
+            recognition.start();
+            recognizing = true;
+        }
+    });
+
+    $(document).ready(function () {
+        $('.library-item').on('click', function () {
+            $('.library-item').removeClass('selected');
+            $(this).addClass('selected');
+            selectedModel = $(this).data('library');
+            $('#message-input').attr('placeholder', 'Type your query for ' + selectedModel);
+        });
+
+        $('#send-button').on('click', sendMessage);
+        $('#message-input').on('keypress', function (e) {
+            if (e.which === 13) sendMessage();
+        });
+    });
+
+    function sendMessage() {
+        const userMessage = $('#message-input').val().trim();
+        if (!userMessage) {
+            alert('Please enter a message.');
+            return;
+        }
+
+        $('#chat-body').append(`<div class="message-container user-message-container"><div class="user-message message">${userMessage}</div></div>`);
+        $('#loading').show();
+        $('#message-input').val('');
+
+        $.ajax({
+            url: '/' + selectedModel,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ message: userMessage }),
+            success: function (response) {
+                $('#loading').hide();
+                const botResponse = response.response || "No response received.";
+                $('#chat-body').append(`<div class="message-container bot-message-container"><div class="bot-message message">${botResponse.replace(/\n/g, "<br>")}</div></div>`);
+                speakText(botResponse);
+                $('#chat-body').scrollTop($('#chat-body')[0].scrollHeight);
+            },
+            error: function () {
+                $('#loading').hide();
+                $('#chat-body').append('<div class="message-container bot-message-container"><div class="bot-message message">Sorry, an error occurred. Please try again.</div></div>');
+                $('#chat-body').scrollTop($('#chat-body')[0].scrollHeight);
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

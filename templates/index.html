@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Upload</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Upload A Document</h1>
+        <hr>
+
+        <div class="card p-3 mb-4">
+            <h3>Upload File</h3>
+            <form action="/process_document" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="document" class="form-label">Select Document (PDF):</label>
+                    <input type="file" class="form-control-file" name="document" id="document" accept=".pdf" required>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="voice" class="form-label">Upload Voice (Audio):</label>
+                    <input type="file" class="form-control-file" name="voice" id="voice" accept=".mp3,.wav,.ogg">
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Submit & Process</button>
+            </form>
+            
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert alert-success mt-3">
+                    {% for category, message in messages %}
+                        {{ message }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">
+            {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
